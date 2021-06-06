@@ -1,14 +1,4 @@
-#include <iostream>
-#include <optional>
-#include <variant>
-
-template <class... Ts>
-struct overload : Ts...
-{
-    using Ts::operator()...;
-};
-template <class... Ts>
-overload(Ts...) -> overload<Ts...>;
+#include "fsm.h"
 
 struct Opened
 {
@@ -58,48 +48,6 @@ struct Lock
 struct Unlock
 {
         int key;
-};
-
-template <typename Derived, typename StateVariant>
-class fsm
-{
-      public:
-        const StateVariant &get_state() const { return state_; }
-        StateVariant &get_state() { return state_; }
-
-        template <typename Event>
-        void dispatch(Event && event)
-        {
-            Derived &child = static_cast<Derived &>(*this);
-            auto new_state = std::visit(
-                [&](auto &s) -> std::optional<StateVariant> {
-                    return child.on_event(s, std::forward<Event>(event));
-                },
-                state_);
-            if (new_state)
-            {
-                transitionDone(state_, *new_state);
-                state_ = *std::move(new_state);
-            }
-            else
-            {
-                transitionError(state_);
-            }
-        }
-
-      private:
-        StateVariant state_;
-        void transitionDone(const StateVariant &from, const StateVariant &to)
-        {
-            std::cout << "transition from " << StateName(from) << " to "
-                      << StateName(to) << "\n";
-        }
-
-        void transitionError(const StateVariant &s)
-        {
-            std::cout << "transition error, stay in state " << StateName(s)
-                      << "\n";
-        }
 };
 
 class Locking : public fsm<Locking, ClosedSubState>
